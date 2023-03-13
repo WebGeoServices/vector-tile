@@ -1,30 +1,30 @@
 #pragma once
 
 #include "vector_tile/vector_tile_config.hpp"
-#include <mapbox/geometry.hpp>
 #include <mapbox/feature.hpp>
+#include <mapbox/geometry.hpp>
 #include <protozero/pbf_reader.hpp>
 
 #include <cmath>
 #include <cstdint>
-#include <map>
 #include <functional> // reference_wrapper
-#include <string>
+#include <map>
 #include <stdexcept>
+#include <string>
 
-namespace mapbox { namespace vector_tile {
+namespace mapbox {
+namespace vector_tile {
 
 using point_type = mapbox::geometry::point<std::int16_t>;
 
 class points_array_type : public std::vector<point_type> {
-public:
+  public:
     using coordinate_type = point_type::coordinate_type;
-    template <class... Args>
-    points_array_type(Args&&... args) : std::vector<point_type>(std::forward<Args>(args)...) {}
+    template <class... Args> points_array_type(Args&&... args) : std::vector<point_type>(std::forward<Args>(args)...) {}
 };
 
 class points_arrays_type : public std::vector<points_array_type> {
-public:
+  public:
     using coordinate_type = points_array_type::coordinate_type;
     template <class... Args>
     points_arrays_type(Args&&... args) : std::vector<points_array_type>(std::forward<Args>(args)...) {}
@@ -33,7 +33,7 @@ public:
 class layer;
 
 class feature {
-public:
+  public:
     using properties_type = mapbox::feature::property_map;
     using packed_iterator_type = protozero::iterator_range<protozero::pbf_reader::const_uint32_iterator>;
 
@@ -45,10 +45,9 @@ public:
     mapbox::feature::identifier const& getID() const;
     std::uint32_t getExtent() const;
     std::uint32_t getVersion() const;
-    template <typename GeometryCollectionType>
-    GeometryCollectionType getGeometries(float scale) const;
+    template <typename GeometryCollectionType> GeometryCollectionType getGeometries(float scale) const;
 
-private:
+  private:
     const layer& layer_;
     mapbox::feature::identifier id;
     GeomType type = GeomType::UNKNOWN;
@@ -57,7 +56,7 @@ private:
 };
 
 class layer {
-public:
+  public:
     layer(protozero::data_view const& layer_view);
 
     std::size_t featureCount() const { return features.size(); }
@@ -66,7 +65,7 @@ public:
     std::uint32_t getExtent() const { return extent; }
     std::uint32_t getVersion() const { return version; }
 
-private:
+  private:
     friend class feature;
 
     std::string name;
@@ -79,21 +78,20 @@ private:
 };
 
 class buffer {
-public:
+  public:
     buffer(std::string const& data);
     std::vector<std::string> layerNames() const;
     std::map<std::string, const protozero::data_view> getLayers() const { return layers; };
     layer getLayer(const std::string&) const;
 
-private:
+  private:
     std::map<std::string, const protozero::data_view> layers;
 };
 
 static mapbox::feature::value parseValue(protozero::data_view const& value_view) {
     mapbox::feature::value value;
     protozero::pbf_reader value_reader(value_view);
-    while (value_reader.next())
-    {
+    while (value_reader.next()) {
         switch (value_reader.tag()) {
         case ValueType::STRING:
             value = value_reader.get_string();
@@ -125,12 +123,7 @@ static mapbox::feature::value parseValue(protozero::data_view const& value_view)
 }
 
 inline feature::feature(protozero::data_view const& feature_view, layer const& l)
-    : layer_(l),
-      id(),
-      type(GeomType::UNKNOWN),
-      tags_iter(),
-      geometry_iter()
-    {
+    : layer_(l), id(), type(GeomType::UNKNOWN), tags_iter(), geometry_iter() {
     protozero::pbf_reader feature_pbf(feature_view);
     while (feature_pbf.next()) {
         switch (feature_pbf.tag()) {
@@ -174,7 +167,8 @@ inline mapbox::feature::value feature::getValue(const std::string& key) const {
             throw std::runtime_error("uneven number of feature tag ids");
         }
 
-        std::uint32_t tag_val = static_cast<std::uint32_t>(*start_itr++);;
+        std::uint32_t tag_val = static_cast<std::uint32_t>(*start_itr++);
+        ;
         if (values_count <= tag_val) {
             throw std::runtime_error("feature referenced out of range value");
         }
@@ -191,35 +185,28 @@ inline feature::properties_type feature::getProperties() const {
     auto start_itr = tags_iter.begin();
     const auto end_itr = tags_iter.end();
     properties_type properties;
-    auto iter_len = std::distance(start_itr,end_itr);
+    auto iter_len = std::distance(start_itr, end_itr);
     if (iter_len > 0) {
-        properties.reserve(static_cast<std::size_t>(iter_len/2));
+        properties.reserve(static_cast<std::size_t>(iter_len / 2));
         while (start_itr != end_itr) {
             std::uint32_t tag_key = static_cast<std::uint32_t>(*start_itr++);
             if (start_itr == end_itr) {
                 throw std::runtime_error("uneven number of feature tag ids");
             }
             std::uint32_t tag_val = static_cast<std::uint32_t>(*start_itr++);
-            properties.emplace(layer_.keys.at(tag_key),parseValue(layer_.values.at(tag_val)));
+            properties.emplace(layer_.keys.at(tag_key), parseValue(layer_.values.at(tag_val)));
         }
     }
     return properties;
 }
 
-inline mapbox::feature::identifier const& feature::getID() const {
-    return id;
-}
+inline mapbox::feature::identifier const& feature::getID() const { return id; }
 
-inline std::uint32_t feature::getExtent() const {
-    return layer_.getExtent();
-}
+inline std::uint32_t feature::getExtent() const { return layer_.getExtent(); }
 
-inline std::uint32_t feature::getVersion() const {
-    return layer_.getVersion();
-}
+inline std::uint32_t feature::getVersion() const { return layer_.getVersion(); }
 
-template <typename GeometryCollectionType>
-GeometryCollectionType feature::getGeometries(float scale) const {
+template <typename GeometryCollectionType> GeometryCollectionType feature::getGeometries(float scale) const {
     std::uint8_t cmd = 1;
     std::uint32_t length = 0;
     std::int64_t x = 0;
@@ -299,19 +286,16 @@ GeometryCollectionType feature::getGeometries(float scale) const {
             y += protozero::decode_zigzag32(static_cast<std::uint32_t>(*start_itr++));
             float px = ::roundf(static_cast<float>(x) * scale);
             float py = ::roundf(static_cast<float>(y) * scale);
-            static const float max_coord = static_cast<float>(std::numeric_limits<typename GeometryCollectionType::coordinate_type>::max());
-            static const float min_coord = static_cast<float>(std::numeric_limits<typename GeometryCollectionType::coordinate_type>::min());
+            static const float max_coord =
+                static_cast<float>(std::numeric_limits<typename GeometryCollectionType::coordinate_type>::max());
+            static const float min_coord =
+                static_cast<float>(std::numeric_limits<typename GeometryCollectionType::coordinate_type>::min());
 
-            if (px > max_coord ||
-                px < min_coord ||
-                py > max_coord ||
-                py < min_coord
-                ) {
+            if (px > max_coord || px < min_coord || py > max_coord || py < min_coord) {
                 throw std::runtime_error("paths outside valid range of coordinate_type");
             } else {
-                paths.back().emplace_back(
-                    static_cast<typename GeometryCollectionType::coordinate_type>(px),
-                    static_cast<typename GeometryCollectionType::coordinate_type>(py));
+                paths.back().emplace_back(static_cast<typename GeometryCollectionType::coordinate_type>(px),
+                                          static_cast<typename GeometryCollectionType::coordinate_type>(py));
             }
         } else if (cmd == CommandType::CLOSE) {
             if (!paths.back().empty()) {
@@ -337,23 +321,22 @@ GeometryCollectionType feature::getGeometries(float scale) const {
     return paths;
 }
 
-inline buffer::buffer(std::string const& data)
-    : layers() {
-        protozero::pbf_reader data_reader(data);
-        while (data_reader.next(TileType::LAYERS)) {
-            const protozero::data_view layer_view = data_reader.get_view();
-            protozero::pbf_reader layer_reader(layer_view);
-            std::string name;
-            bool has_name = false;
-            while (layer_reader.next(LayerType::NAME)) {
-                name = layer_reader.get_string();
-                has_name = true;
-            }
-            if (!has_name) {
-                throw std::runtime_error("Layer missing name");
-            }
-            layers.emplace(name, layer_view);
+inline buffer::buffer(std::string const& data) : layers() {
+    protozero::pbf_reader data_reader(data);
+    while (data_reader.next(TileType::LAYERS)) {
+        const protozero::data_view layer_view = data_reader.get_view();
+        protozero::pbf_reader layer_reader(layer_view);
+        std::string name;
+        bool has_name = false;
+        while (layer_reader.next(LayerType::NAME)) {
+            name = layer_reader.get_string();
+            has_name = true;
         }
+        if (!has_name) {
+            throw std::runtime_error("Layer missing name");
+        }
+        layers.emplace(name, layer_view);
+    }
 }
 
 inline std::vector<std::string> buffer::layerNames() const {
@@ -368,67 +351,46 @@ inline std::vector<std::string> buffer::layerNames() const {
 inline layer buffer::getLayer(const std::string& name) const {
     auto layer_it = layers.find(name);
     if (layer_it == layers.end()) {
-        throw std::runtime_error(std::string("no layer by the name of '")+name+"'");
+        throw std::runtime_error(std::string("no layer by the name of '") + name + "'");
     }
     return layer(layer_it->second);
 }
 
-inline layer::layer(protozero::data_view const& layer_view) :
-    name(),
-    version(1),
-    extent(4096),
-    keysMap(),
-    keys(),
-    values(),
-    features()
-{
+inline layer::layer(protozero::data_view const& layer_view)
+    : name(), version(1), extent(4096), keysMap(), keys(), values(), features() {
     bool has_name = false;
     bool has_extent = false;
     bool has_version = false;
     protozero::pbf_reader layer_pbf(layer_view);
     while (layer_pbf.next()) {
         switch (layer_pbf.tag()) {
-        case LayerType::NAME:
-            {
-                name = layer_pbf.get_string();
-                has_name = true;
-            }
-            break;
-        case LayerType::FEATURES:
-            {
-                features.push_back(layer_pbf.get_view());
-            }
-            break;
-        case LayerType::KEYS:
-            {
-                // We want to keep the keys in the order of the vector tile
-                // https://github.com/mapbox/mapbox-gl-native/pull/5183
-                auto iter = keysMap.emplace(layer_pbf.get_string(), keysMap.size());
-                keys.emplace_back(std::reference_wrapper<const std::string>(iter.first->first));
-            }
-            break;
-        case LayerType::VALUES:
-            {
-                values.emplace_back(layer_pbf.get_view());
-            }
-            break;
-        case LayerType::EXTENT:
-            {
-                extent = layer_pbf.get_uint32();
-                has_extent = true;
-            }
-            break;
-        case LayerType::VERSION:
-            {
-                version = layer_pbf.get_uint32();
-                has_version = true;
-            }
-            break;
-        default:
-            {
-                layer_pbf.skip();
-            }
-            break;
+        case LayerType::NAME: {
+            name = layer_pbf.get_string();
+            has_name = true;
+        } break;
+        case LayerType::FEATURES: {
+            features.push_back(layer_pbf.get_view());
+        } break;
+        case LayerType::KEYS: {
+            // We want to keep the keys in the order of the vector tile
+            // https://github.com/mapbox/mapbox-gl-native/pull/5183
+            auto iter = keysMap.emplace(layer_pbf.get_string(), keysMap.size());
+            keys.emplace_back(std::reference_wrapper<const std::string>(iter.first->first));
+        } break;
+        case LayerType::VALUES: {
+            values.emplace_back(layer_pbf.get_view());
+        } break;
+        case LayerType::EXTENT: {
+            extent = layer_pbf.get_uint32();
+            has_extent = true;
+        } break;
+        case LayerType::VERSION: {
+            version = layer_pbf.get_uint32();
+            has_version = true;
+        } break;
+        default: {
+            layer_pbf.skip();
+        } break;
         }
     }
     if (!has_version || !has_name || !has_extent) {
@@ -446,12 +408,9 @@ inline layer::layer(protozero::data_view const& layer_view) :
     }
 }
 
-inline protozero::data_view const& layer::getFeature(std::size_t i) const {
-    return features.at(i);
-}
+inline protozero::data_view const& layer::getFeature(std::size_t i) const { return features.at(i); }
 
-inline std::string const& layer::getName() const {
-    return name;
-}
+inline std::string const& layer::getName() const { return name; }
 
-}} // namespace mapbox/vector_tile
+} // namespace vector_tile
+} // namespace mapbox
