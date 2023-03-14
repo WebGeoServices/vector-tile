@@ -3,12 +3,12 @@
 
 #include <catch.hpp>
 
-TEST_CASE( "Version constant" ) {
+TEST_CASE("Version constant") {
     CHECK(std::string(VECTOR_TILE_VERSION_STRING) == std::string("1.0.4"));
     CHECK(VECTOR_TILE_VERSION_CODE == 10004);
 }
 
-TEST_CASE( "Protobuf Tag Constants" ) {
+TEST_CASE("Protobuf Tag Constants") {
     CHECK(mapbox::vector_tile::TileType::LAYERS == 3);
 
     CHECK(mapbox::vector_tile::LayerType::VERSION == 15);
